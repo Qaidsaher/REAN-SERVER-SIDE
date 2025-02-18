@@ -24,7 +24,11 @@ exports.createInvestment = async (req, res) => {
 
 exports.getAllInvestments = async (req, res) => {
   try {
-    const investments = await Investment.find();
+    const investments = await Investment.find()
+      .populate('investor')
+      .populate('innovator')
+      .populate('innovation')
+      .populate('commitment');
     res.json(investments);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -32,45 +36,13 @@ exports.getAllInvestments = async (req, res) => {
 };
 
 exports.getInvestmentById = async (req, res) => {
-  // try {
-  //     const investment = await Investment.findById(req.params.id);
-  //     if (!investment) return res.status(404).json({ message: 'Investment not found' });
-  //     res.json(investment);
-  // } catch (error) {
-  //     res.status(500).json({ error: error.message });
-  // }
+
   try {
     const investment = await Investment.findById(req.params.id)
-      .populate({
-        path: "innovation",
-        select: "name description cost image video status category createdBy",
-        populate: [
-          {
-            path: "category",
-            select: "name",
-          },
-          {
-            path: "createdBy",
-            select: "firstName lastName email bio city education phone photo",
-          },
-        ],
-      })
-      .populate({
-        path: "commitment",
-        select: "conditions status",
-        populate: [
-          {
-            path: "investor",
-            select:
-              "firstName lastName email company photo bio city education phone",
-          },
-          {
-            path: "innovator",
-            select: "firstName lastName email bio city education phone photo",
-          },
-        ],
-      });
-
+      .populate('investor')
+      .populate('innovator')
+      .populate('innovation')
+      .populate('commitment');
     if (!investment) {
       console.log("❌ Investment not found.");
       return res.status(404).json({ message: "Investment not found." });
@@ -86,18 +58,58 @@ exports.getInvestmentById = async (req, res) => {
 
 exports.updateInvestment = async (req, res) => {
   try {
-    const updatedInvestment = await Investment.findByIdAndUpdate(
-      req.params.id,
-      req.body,
+    const { id } = req.params;
+    const { status } = req.body;
+
+
+    const validStatuses = ['Active', 'Pending', 'Cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Invalid status provided.' });
+    }
+
+    // Find the investment and populate commitment
+    const investment = await Investment.findById(id)
+      .populate('investor')
+      .populate('innovator')
+      .populate('innovation')
+      .populate('commitment');
+
+    if (!investment) {
+      return res.status(404).json({ message: 'Investment not found.' });
+    }
+
+    // Extract commitment ID
+    const commitmentId = investment.commitment?._id;
+    if (!commitmentId) {
+      return res.status(404).json({ message: 'Commitment not found for this investment.' });
+    }
+
+    // Update the commitment status
+    const updatedCommitment = await Commitment.findByIdAndUpdate(
+      commitmentId,
+      { status },
       { new: true }
     );
-    if (!updatedInvestment)
-      return res.status(404).json({ message: "Investment not found" });
-    res.json({ message: "Investment updated successfully", updatedInvestment });
+
+    // console.log('Updated Commitment:', updatedCommitment);
+
+    // Refetch the updated investment to get the latest commitment status
+    const updatedInvestment = await Investment.findById(id)
+      .populate('investor')
+      .populate('innovator')
+      .populate('innovation')
+      .populate('commitment');
+
+    res.json({
+      message: 'Investment and commitment status updated successfully.',
+      updatedInvestment
+    });
+
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
+
 
 exports.deleteInvestment = async (req, res) => {
   try {

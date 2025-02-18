@@ -9,7 +9,7 @@ router.put("/profile", authMiddleware, upload.single("photo"), userChatControlle
 // ✅ Route to Get User Profile
 router.get("/profile", authMiddleware,userChatController.getProfile);
 
-router.get("/investor-dashboard",  authMiddleware,userController.getInvestorDashboard);
+// router.get("/investor-dashboard",  authMiddleware,userController.getInvestorDashboard);
 router.post("/create-chat", authMiddleware, userChatController.getOrCreateChat);
 router.post("/send-message", authMiddleware, userChatController.sendMessage);
 router.get("/chats", authMiddleware, userChatController.getChats);
@@ -23,7 +23,6 @@ router.post("/change-password", authMiddleware, userChatController.changePasswor
 
 // ✅ Delete Account Route (For both Innovators and Investors)
 router.delete("/delete-account", authMiddleware, userChatController.deleteAccount);
-
 
 
 

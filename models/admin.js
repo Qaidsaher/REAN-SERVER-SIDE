@@ -6,6 +6,8 @@ const adminSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     state: { type: String },
     password: { type: String, required: true },
-    publishDate: { type: Date, default: Date.now }
+    publishDate: { type: Date, default: Date.now },
+    resetToken: String,                      // Token for password reset
+    resetTokenExpires: Date      
 });
 module.exports = mongoose.model('Admin', adminSchema);

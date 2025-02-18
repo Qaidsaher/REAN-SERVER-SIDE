@@ -3,8 +3,10 @@ const Investor = require('../models/investor');
 
 exports.createInvestor = async (req, res) => {
     try {
-        const { firstName, lastName, email, education, password, phone, birthday } = req.body;
-        const newInvestor = new Investor({ firstName, lastName, email, education, password, phone, birthday });
+        const { firstName, lastName, email, bio, city, education, password, phone, birthday } = req.body;
+        console.log("body: ", req.body)
+
+        const newInvestor = new Investor({ firstName, lastName, email, bio, city, education, password, phone, birthday });
         await newInvestor.save();
         res.status(201).json({ message: 'Investor created successfully', investor: newInvestor });
     } catch (error) {

@@ -4,75 +4,108 @@ const Category = require("../models/category");
 const Innovation = require("../models/innovation");
 const Innovator = require("../models/innovator");
 const Investor = require("../models/investor");
+const Message = require("../models/message");
+
 const Commitment = require("../models/commitment");
 const Investment = require("../models/investment");
 const Notification = require("../models/notification");
-const Chatting = require("../models/chatting");
-const jwt = require('jsonwebtoken');
+const Chat = require("../models/chat");
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
-require('dotenv').config();
-
-exports.login = async (req, res) => {
+exports.getAdminDashboard = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const admin = await Admin.findOne({ email });
-        if (!admin) return res.status(400).json({ message: 'Admin not found' });
-        const validPassword = await bcrypt.compare(password, admin.password);
-        if (!validPassword) return res.status(400).json({ message: 'Invalid credentials' });
-        const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.json({ token });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
+        // Fetch basic counts
+        const adminCount = await Admin.countDocuments();
+        const categoryCount = await Category.countDocuments();
+        const chatCount = await Chat.countDocuments();
+        const commitmentCount = await Commitment.countDocuments();
+        const innovationCount = await Innovation.countDocuments();
+        const innovatorCount = await Innovator.countDocuments();
+        const investmentCount = await Investment.countDocuments();
+        const investorCount = await Investor.countDocuments();
+        const messageCount = await Message.countDocuments();
+        const notificationCount = await Notification.countDocuments();
 
-exports.logout = async (req, res) => {
-    try {
-        res.json({ message: 'Logout successful' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-exports.getProfile = async (req, res) => {
-    try {
-        const admin = req.admin;
-        res.json(admin);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-};
-
-exports.forgotPassword = async (req, res) => {
-    try {
-        const { email } = req.body;
-        const admin = await Admin.findOne({ email });
-        if (!admin) return res.status(400).json({ message: 'Admin not found' });
-        
-        const token = jwt.sign({ id: admin._id }, process.env.JWT_SECRET, { expiresIn: '15m' });
-        
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
+        // Fetch data for charts
+        const innovationsByCategory = await Innovation.aggregate([
+            {
+                $group: {
+                    _id: "$category",
+                    name: { $first: "$name" }, // Assuming you have categoryName in the schema or you may need a $lookup
+                    count: { $sum: 1 }
+                }
             }
-        });
-        
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Password Reset',
-            text: `Click the link to reset your password: ${process.env.CLIENT_URL}/reset-password/${token}`
+        ]);
+
+        const investmentsByStatus = await Investment.aggregate([
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]);
+
+        const innovationsByStatus = await Innovation.aggregate([
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]);
+
+        const chatsByDate = await Chat.aggregate([
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        const notificationsByStatus = await Notification.aggregate([
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+        ]);
+
+        const messagesByDate = await Message.aggregate([
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$timestamp" } },
+                    count: { $sum: 1 }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]);
+
+        // Prepare response
+        const dashboardData = {
+            totals: {
+                admins: adminCount,
+                categories: categoryCount,
+                chats: chatCount,
+                commitments: commitmentCount,
+                innovations: innovationCount,
+                innovators: innovatorCount,
+                investments: investmentCount,
+                investors: investorCount,
+                messages: messageCount,
+                notifications: notificationCount,
+            },
+            charts: {
+                innovationsByCategory,
+                investmentsByStatus,
+                innovationsByStatus,
+                chatsByDate,
+                notificationsByStatus,
+                messagesByDate
+            },
+            recent: {
+                latestInnovations: await Innovation.find().sort({ publishDate: -1 }).limit(5),
+                latestInvestments: await Investment.find().sort({ createdAt: -1 }).limit(5),
+                latestMessages: await Message.find().sort({ timestamp: -1 }).limit(5),
+                latestNotifications: await Notification.find().sort({ createdAt: -1 }).limit(5),
+            }
         };
-        
-        await transporter.sendMail(mailOptions);
-        res.json({ message: 'Password reset link sent to your email' });
+
+        res.status(200).json(dashboardData);
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error("Error fetching admin dashboard data:", error);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 };
+
 
 // controllers/adminController.js
 exports.createAdmin = async (req, res) => {
@@ -128,7 +161,7 @@ exports.getAllCounts = async (req, res) => {
         const commitmentCount = await Commitment.countDocuments();
         const investmentCount = await Investment.countDocuments();
         const notificationCount = await Notification.countDocuments();
-        const chattingCount = await Chatting.countDocuments();
+        const chattingCount = await Chat.countDocuments();
 
         res.json({
             admins: adminCount,

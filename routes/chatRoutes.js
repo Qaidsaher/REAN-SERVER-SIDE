@@ -1,0 +1,14 @@
+const express = require("express");
+const router = express.Router();
+const userChatController = require("../controllers/userChatController");
+const userController = require("../controllers/userController");
+const authMiddleware = require("../middleware/authMiddleware");
+const upload = require("../middleware/multer");
+router.post("/create-chat", authMiddleware, userChatController.getOrCreateChat);
+router.post("/send-message", authMiddleware, userChatController.sendMessage);
+router.get("/chats", authMiddleware, userChatController.getChats);
+router.get("/chat-users", authMiddleware, userChatController.getUsers);
+router.get("/messages/:chatId", authMiddleware, userChatController.getMessages);
+router.put("/edit-message", authMiddleware, userChatController.editMessage);
+router.delete("/delete-message/:messageId", authMiddleware, userChatController.deleteMessage);
+module.exports = router;

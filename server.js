@@ -18,6 +18,11 @@ const userChatRoutes = require("./routes/userChatRoutes");
 const path = require('path')
 const investorUserRoutes = require('./routes/investorUserRoutes')
 const userInvestmentRoute = require('./routes/investmentRoutes')
+const adminUserRoutes = require('./routes/adminUserRoutes') 
+//------------------------------
+const websiteRoutes =require('./routes/websiteRoutes') 
+const chatRoutes = require('./routes/chatRoutes')
+const profileRoutes = require('./routes/profileRoutes')
 require('dotenv').config();
 
 const app = express();
@@ -32,7 +37,10 @@ app.use(
   
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 app.use('/api/admin', adminRoutes);
+app.use('/api/website',websiteRoutes)
+app.use('/api/admin/users',adminUserRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/innovation', innovationRoutes);
 app.use('/api/innovator', innovatorRoutes);
@@ -41,6 +49,9 @@ app.use('/api/notification', notificationRoutes);
 app.use('/api/commitment', commitmentRoutes);
 app.use('/api/investment', investmentRoutes);
 app.use('/api/chats', chattingRoutes);
+app.use('/api/user/chat',chatRoutes)
+app.use('/api/user/profile',profileRoutes)
+
 app.use('/api/relations', relationsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);

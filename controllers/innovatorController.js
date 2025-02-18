@@ -3,8 +3,8 @@ const Innovator = require('../models/innovator');
 
 exports.createInnovator = async (req, res) => {
     try {
-        const { firstName, lastName, email, city, education, password, phone, birthday } = req.body;
-        const newInnovator = new Innovator({ firstName, lastName, email, city, education, password, phone, birthday });
+        const { firstName, lastName, email, bio, city, education, password, phone, birthday } = req.body;
+        const newInnovator = new Innovator({ firstName, lastName, email, bio, city, education, password, phone, birthday });
         await newInnovator.save();
         res.status(201).json({ message: 'Innovator created successfully', innovator: newInnovator });
     } catch (error) {

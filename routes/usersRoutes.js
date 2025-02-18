@@ -6,10 +6,12 @@ const Innovation = require("../models/innovation"); // Import Innovation Model
 const upload = require("../middleware/multer");
 
 // ✅ Innovations Routes
-router.get("/innovator-dashboard", authMiddleware, userController.getInnovatorStats);
+router.get("/innovator-dashboard", authMiddleware, userController.getInnovatorDashboard);
 router.post("/innovator-dashboard-request/:id", authMiddleware, userController.handleInvestmentRequest);
 router.get("/innovations", authMiddleware, userController.getUserInnovations);
 router.get("/innovations-all", authMiddleware, userController.getInnovations);
+router.get("/notifications", authMiddleware, userController.getUserNotifications);
+
 router.post(
   "/innovations",
   authMiddleware,

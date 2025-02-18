@@ -1,12 +1,12 @@
 const Innovation = require("../models/innovation");
 const Investment = require("../models/investment");
-const Chatting = require("../models/chatting");
 const Category = require("../models/category");
 const Investor = require("../models/investor"); // ✅ Use Investors model
 const Innovator = require("../models/innovator");
 const Commitment = require("../models/commitment");
 const Chat = require("../models/chat");
 const Notification = require("../models/notification");
+
 // const Investors = require("../models/Investors");
 // ✅ Get all innovations created by the user
 exports.getUserInnovations = async (req, res) => {
@@ -311,49 +311,69 @@ exports.getInvestorDashboard = async (req, res) => {
   }
 };
 
-exports.getInnovatorStats = async (req, res) => {
+exports.getInnovatorDashboard = async (req, res) => {
   try {
-    const totalInnovations = await Innovation.countDocuments({
-      createdBy: req.user.id,
-    });
-    const approvedInnovations = await Innovation.countDocuments({
-      createdBy: req.user.id,
-      status: "Approved",
-    });
-    const pendingInnovations = await Innovation.countDocuments({
-      createdBy: req.user.id,
-      status: "Pending",
-    });
-    const rejectedInnovations = await Innovation.countDocuments({
-      createdBy: req.user.id,
-      status: "Rejected",
-    });
-    const totalFunding = await Investment.aggregate([
-      { $match: { innovator: req.user.id } },
-      { $group: { _id: null, total: { $sum: "$amount" } } },
-    ]);
-    const commitments = await Commitment.countDocuments({
-      innovator: req.user.id,
-    });
-    const notifications = await Notification.countDocuments({
-      receiver: req.user.id,
-    });
-    const chats = await Chat.countDocuments({ participants: req.user.id });
+      const innovatorId = req.user.id; // Assuming user ID is set in `req.user`
 
-    res.json({
-      totalInnovations,
-      approvedInnovations,
-      pendingInnovations,
-      rejectedInnovations,
-      totalFunding: totalFunding[0]?.total || 0,
-      commitments,
-      notifications,
-      chats,
-    });
+      // ✅ 1. Get Notifications Count
+      const notificationsCount = await Notification.countDocuments({ receiverId: innovatorId, receiverType: 'Innovator' });
+
+      // ✅ 2. Get Chat Count
+      const chatCount = await Chat.countDocuments({ innovator: innovatorId });
+
+      // ✅ 3. Get Total Innovations
+      const totalInnovations = await Innovation.countDocuments({ createdBy: innovatorId });
+
+      // ✅ 4. Get Total Funding from Investments
+      const totalFunding = await Investment.aggregate([
+          { $match: { innovator: innovatorId } },
+          { $group: { _id: null, total: { $sum: "$amount" } } }
+      ]);
+      const totalFundingAmount = totalFunding.length ? totalFunding[0].total : 0;
+
+      // ✅ 5. Get Commitments Count
+      const commitmentsCount = await Commitment.countDocuments({ innovator: innovatorId });
+
+      // ✅ 6. Get Investment Trends (grouped by month)
+      const investmentTrends = await Investment.aggregate([
+          { $match: { innovator: innovatorId } },
+          {
+              $group: {
+                  _id: { $month: "$createdAt" },
+                  investments: { $sum: "$amount" }
+              }
+          },
+          { $sort: { "_id": 1 } }
+      ]).then(data => data.map(item => ({
+          month: `Month ${item._id}`,
+          investments: item.investments
+      })));
+
+      // ✅ 7. Get Pending Innovations
+      const pendingInnovations = await Innovation.find({ createdBy: innovatorId, status: 'Pending' }).select('name');
+      console.log("pend",JSON.stringify(pendingInnovations))  
+      // ✅ 8. Get Investment Requests (pending investments)
+      const investmentRequests = await Investment.find({ innovator: innovatorId, status: 'Pending' })
+          .populate('investor', 'firstName lastName')
+          .select('amount investor');
+
+      // ✅ Combine all data into a single response
+      const dashboardData = {
+          notifications: notificationsCount,
+          chats: chatCount,
+          totalInnovations,
+          totalFunding: totalFundingAmount,
+          commitments: commitmentsCount,
+          investmentTrends,
+          pendingInnovations,
+          investmentRequests
+      };
+
+      res.status(200).json(dashboardData);
+
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching stats", error: error.message });
+      console.error("❌ Error fetching innovator dashboard data:", error);
+      res.status(500).json({ error: "Failed to fetch dashboard data" });
   }
 };
 
@@ -511,6 +531,45 @@ exports.handleInvestmentRequest = async (req, res) => {
     res.status(500).json({
       message: "Error updating investment status",
       error: error.message,
+    });
+  }
+};
+
+/**
+ * Get all notifications for a given user.
+ * Expects route parameters: userId and userType.
+ *
+ * Example route: GET /api/notifications/:userId/:userType
+ */
+// controllers/notifications.controller.js
+
+exports.getUserNotifications = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    // Convert role: first letter uppercase, rest lowercase.
+    const userRole = req.user.role;
+    const userType = userRole === "innovator" ? "Innovator" : "Investor";
+    // userRole.charAt(0).toUpperCase() + userRole.slice(1).toLowerCase();
+
+    // Allowed types (capitalized)
+    const allowedTypes = ["Admin", "Innovator", "Investor"];
+    // if (!allowedTypes.includes(userType)) {
+    //   return res
+    //     .status(400)
+    //     .json({ success: false, error: "Invalid user type" });
+    // }
+
+    const notifications = await Notification.find({
+      receiverId: userId,
+      receiverType: "Innovator"//userType,
+    }).sort({ createdAt: -1 });
+    console.log("notify" + userType)
+    res.status(200).json({ success: true, data: notifications });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({
+      success: false,
+      error: "Server error while fetching notifications",
     });
   }
 };

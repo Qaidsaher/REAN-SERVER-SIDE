@@ -14,5 +14,7 @@ const investorSchema = new mongoose.Schema({
   phone: { type: String, required: true },
   birthday: { type: Date, required: true },
   publishDate: { type: Date, default: Date.now },
+  resetToken: String,                      // Token for password reset
+  resetTokenExpires: Date      
 });
 module.exports = mongoose.model("Investor", investorSchema);

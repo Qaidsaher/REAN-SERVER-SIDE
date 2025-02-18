@@ -14,6 +14,8 @@ const innovatorSchema = new mongoose.Schema({
     phone: { type: String, required: true },
     birthday: { type: Date, required: true },
     accountX: { type: String },
-    publishDate: { type: Date, default: Date.now }
+    publishDate: { type: Date, default: Date.now },
+    resetToken: String,                      // Token for password reset
+    resetTokenExpires: Date      
 });
 module.exports = mongoose.model('Innovator', innovatorSchema);
