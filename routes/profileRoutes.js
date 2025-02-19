@@ -39,5 +39,6 @@ router.post("/commitments/sign/investor", authMiddleware, userProfileController.
 router.post("/commitments/sign/innovator", authMiddleware, userProfileController.signCommitmentInnovator);
 router.get("/commitments", authMiddleware, userProfileController.getUserCommitments);
 router.get("/investments", authMiddleware, userProfileController.getUserInvestments);
-
+// ✅ Fetch a specific commitment by ID
+router.get("/commitments/:id", authMiddleware, userProfileController.getCommitmentById);
 module.exports = router;

@@ -23,6 +23,6 @@ router.put('/change-password', authMiddleware, changePassword);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/forgot-password', forgotPassword);
-router.delete('/delete-account', deleteAccount);
+router.delete('/delete-account', authMiddleware, deleteAccount);
 
 module.exports = router;

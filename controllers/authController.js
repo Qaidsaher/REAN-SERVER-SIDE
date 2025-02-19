@@ -50,7 +50,7 @@ const googleAuth = async (req, res) => {
         console.log("🔍 [GoogleAuth] Verifying Google Token...");
         const ticket = await client.verifyIdToken({
             idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID,
+            audience: "122534742627-5ln7qqg0q2r87drgrlqh6nn6lsc0pu6g.apps.googleusercontent.com",
         });
 
         const payload = ticket.getPayload();
@@ -269,14 +269,19 @@ const forgotPassword = async (req, res) => {
         const transporter = nodemailer.createTransport({
             service: 'gmail',
             auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS
+
+                // user: process.env.EMAIL_USER,
+                // pass: process.env.EMAIL_PASS
+                user: "Rean63434@gmail.com",
+                pass: "cvhphuadqlygbyvm"
+
             }
         });
 
         await transporter.sendMail({
             to: user.email,
-            from: process.env.EMAIL_USER,
+            // from: process.env.EMAIL_USER,
+            from: "Rean63434@gmail.com",
             subject: 'Password Reset',
             text: `You requested a password reset. Click the link below:\n\n${resetLink}\n\nThis link is valid for 1 hour.`
         });

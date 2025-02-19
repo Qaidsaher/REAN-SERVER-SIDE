@@ -498,7 +498,22 @@ exports.getUserInvestments = async (req, res) => {
     }
 };
 
+// ✅ Fetch a specific commitment by ID
+exports.getCommitmentById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const commitment = await Commitment.findById(id).populate("investor").populate("innovator");
+        
+        if (!commitment) {
+            return res.status(404).json({ message: "Commitment not found" });
+        }
 
+        res.status(200).json(commitment);
+    } catch (error) {
+        console.error("Error fetching commitment by ID:", error);
+        res.status(500).json({ message: "Server error while fetching commitment" });
+    }
+};
 
 
 
