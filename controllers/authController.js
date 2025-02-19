@@ -6,10 +6,88 @@ const Innovator = require('../models/innovator');
 const Investor = require('../models/investor');
 const Admin = require('../models/admin'); // ✅ Import Admin Model
 const nodemailer = require('nodemailer');
+const { OAuth2Client } = require("google-auth-library");
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const generateToken = (id, role) => {
-    return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "1h" });
+    return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: "1d" });
 };
+
+
+
+
+// ✅ Delete Account (Supports Admin, Innovator, Investor)
+const deleteAccount = async (req, res) => {
+    const { role, user } = req;
+
+    let userModel;
+    if (role === "innovator") userModel = Innovator;
+    else if (role === "investor") userModel = Investor;
+    else if (role === "admin") userModel = Admin;
+    else return res.status(400).json({ message: "Invalid role specified" });
+
+    try {
+        await userModel.findByIdAndDelete(user.id);
+        res.json({ message: "Account deleted successfully" });
+    } catch (error) {
+        console.error("❌ [DeleteAccount] Error:", error);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// ✅ Google Login Handler with Debug Logs
+const googleAuth = async (req, res) => {
+    const { token, role } = req.body;
+
+    console.log("🔍 [GoogleAuth] Received Request:", { token: token ? "✅ Token Provided" : "❌ No Token", role });
+
+    if (!token || !role) {
+        return res.status(400).json({ message: "Token and role are required" });
+    }
+
+    try {
+        console.log("🔍 [GoogleAuth] Verifying Google Token...");
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, picture } = payload;
+        console.log("✅ [GoogleAuth] Google Token Verified:", { email, name, picture });
+
+        let user;
+        let userModel;
+
+        if (role === "innovator") userModel = Innovator;
+        else if (role === "investor") userModel = Investor;
+        else return res.status(400).json({ message: "Invalid role" });
+
+        user = await userModel.findOne({ email });
+
+        if (!user) {
+            console.log("🆕 [GoogleAuth] Creating new user...");
+            user = await userModel.create({
+                firstName: name.split(" ")[0],
+                lastName: name.split(" ")[1] || "",
+                email,
+                googleId: payload.sub,
+                googleProfilePic: picture,
+                isGoogleAccount: true,
+            });
+        }
+
+        const jwtToken = generateToken(user._id, role);
+        res.json({ message: "Google Sign-In successful", token: jwtToken, user });
+
+    } catch (error) {
+        console.error("❌ [GoogleAuth] Authentication Error:", error);
+        res.status(401).json({ message: "Invalid Google token" });
+    }
+};
+
+
 
 // ✅ Register User (Admins are not registered via this method)
 const registerUser = async (req, res) => {
@@ -276,5 +354,7 @@ module.exports = {
     getMe,
     changePassword,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    googleAuth,
+    deleteAccount
 };
