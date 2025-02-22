@@ -9,144 +9,10 @@ const Chat = require("../models/chat");
 const Notification = require("../models/notification");
 const bcrypt = require("bcryptjs");
 
-
+const fs = require("fs");
+const path = require("path");
 // Dashboard Controller
-// exports.dashboard = async (req, res) => {
-//     try {
-//         const userId = req.user.id;
-//         const userRole = req.role.toLowerCase();
 
-//         let response = {};
-
-//         if (userRole === "investor") {
-//             const investorId = req.user.id;
-
-//             // ✅ Get Total Investments
-//             const totalInvestments = await Investment.countDocuments({ investor: investorId });
-
-//             // ✅ Get Total Commitments
-//             const totalCommitments = await Commitment.countDocuments({ investor: investorId });
-
-//             // ✅ Get Pending Requests
-//             const pendingRequests = await Investment.countDocuments({ investor: investorId, status: 'Pending' });
-
-//             // ✅ Get Approved Investments
-//             const approvedInvestments = await Investment.countDocuments({ investor: investorId, status: 'Approved' });
-
-//             // ✅ Get Rejected Investments
-//             const rejectedInvestments = await Investment.countDocuments({ investor: investorId, status: 'Rejected' });
-
-//             // ✅ Get Total Investors (unique innovators the investor has interacted with)
-//             const totalInvestors = await Innovation.distinct('createdBy', { investor: investorId }).length;
-
-//             // ✅ Get Investment Trends (group by month)
-//             const investmentTrends = await Investment.aggregate([
-//                 { $match: { investor: investorId } },
-//                 { $group: { _id: { $month: "$createdAt" }, investments: { $sum: "$amount" } } },
-//                 { $sort: { "_id": 1 } }
-//             ]).then(data => data.map(item => ({
-//                 month: `Month ${item._id}`,
-//                 investments: item.investments
-//             })));
-
-//             // ✅ Get Category Distribution (group by category)
-//             const categoryDistribution = await Innovation.aggregate([
-//                 { $lookup: { from: 'investments', localField: '_id', foreignField: 'innovation', as: 'investments' } },
-//                 { $unwind: '$investments' },
-//                 { $match: { 'investments.investor': investorId } },
-//                 { $group: { _id: '$category', value: { $sum: 1 } } }
-//             ]).then(data => data.map(item => ({
-//                 category: item._id,
-//                 value: item.value
-//             })));
-
-//             // ✅ Get Investment Requests
-//             const investmentRequests = await Investment.find({ investor: investorId, status: 'Pending' })
-//                 .populate('innovation', 'name')
-//                 .select('amount innovation status');
-
-//             // ✅ Combine Data
-//             const dashboardData = {
-//                 totalInvestments,
-//                 totalCommitments,
-//                 pendingRequests,
-//                 approvedInvestments,
-//                 rejectedInvestments,
-//                 totalInvestors,
-//                 investmentTrends,
-//                 categoryDistribution,
-//                 investmentRequests
-//             };
-
-//             res.status(200).json(dashboardData);
-//         } else if (userRole === "innovator") {
-//             const innovatorId = req.user.id; // Assuming user ID is set in `req.user`
-
-//             // ✅ 1. Get Notifications Count
-//             const notificationsCount = await Notification.countDocuments({ receiverId: innovatorId, receiverType: 'Innovator' });
-
-//             // ✅ 2. Get Chat Count
-//             const chatCount = await Chat.countDocuments({ innovator: innovatorId });
-
-//             // ✅ 3. Get Total Innovations
-//             const totalInnovations = await Innovation.countDocuments({ createdBy: innovatorId });
-
-//             // ✅ 4. Get Total Funding from Investments
-//             const totalFunding = await Investment.aggregate([
-//                 { $match: { innovator: innovatorId } },
-//                 { $group: { _id: null, total: { $sum: "$amount" } } }
-//             ]);
-//             const totalFundingAmount = totalFunding.length ? totalFunding[0].total : 0;
-
-//             // ✅ 5. Get Commitments Count
-//             const commitmentsCount = await Commitment.countDocuments({ innovator: innovatorId });
-
-//             // ✅ 6. Get Investment Trends (grouped by month)
-//             const investmentTrends = await Investment.aggregate([
-//                 { $match: { innovator: innovatorId } },
-//                 {
-//                     $group: {
-//                         _id: { $month: "$createdAt" },
-//                         investments: { $sum: "$amount" }
-//                     }
-//                 },
-//                 { $sort: { "_id": 1 } }
-//             ]).then(data => data.map(item => ({
-//                 month: `Month ${item._id}`,
-//                 investments: item.investments
-//             })));
-
-//             // ✅ 7. Get Pending Innovations
-//             const pendingInnovations = await Innovation.find({ createdBy: innovatorId, status: 'Pending' }).select('name');
-//             console.log("pend", JSON.stringify(pendingInnovations))
-//             // ✅ 8. Get Investment Requests (pending investments)
-//             const investmentRequests = await Investment.find({ innovator: innovatorId, status: 'Pending' })
-//                 .populate('investor', 'firstName lastName')
-//                 .select('amount investor');
-
-//             // ✅ Combine all data into a single response
-//             const dashboardData = {
-//                 notifications: notificationsCount,
-//                 chats: chatCount,
-//                 totalInnovations,
-//                 totalFunding: totalFundingAmount,
-//                 commitments: commitmentsCount,
-//                 investmentTrends,
-//                 pendingInnovations,
-//                 investmentRequests
-//             };
-
-//             res.status(200).json(dashboardData);
-//         } else {
-//             return res.status(403).json({ message: "Invalid role." });
-//         }
-
-//         res.status(200).json(response);
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Internal server error.", error: error.message });
-//     }
-// };
 
 exports.dashboard = async (req, res) => {
     try {
@@ -274,55 +140,7 @@ exports.dashboard = async (req, res) => {
     }
 };
 
-// // Function for investors to create investments with commitments
-// exports.createInvestmentWithCommitment = async (req, res) => {
-//     try {
-//         const { innovationId, amount, milestones } = req.body;
-//         const investorId = req.user.id;
 
-//         const innovation = await Innovation.findById(innovationId);
-//         if (!innovation) {
-//             return res.status(404).json({ message: "Innovation not found" });
-//         }
-
-//         const commitment = new Commitment({
-//             conditions: "",
-//             milestones,
-//             investor: investorId,
-//             innovator: innovation.createdBy,
-//             status: "Pending",
-//         });
-//         await commitment.save();
-
-//         const notification = new Notification({
-//             title: "New Commitment Created",
-//             content: "A new investment commitment requires your conditions.",
-//             senderType: "Investor",
-//             senderId: investorId,
-//             receiverType: "Innovator",
-//             receiverId: innovation.createdBy,
-//             type: "System",
-//             status: "Info",
-//         });
-//         await notification.save();
-
-//         const investment = new Investment({
-//             investor: investorId,
-//             innovator: innovation.createdBy,
-//             innovation: innovationId,
-//             commitment: commitment._id,
-
-//             amount,
-//             status: "Pending",
-//         });
-//         await investment.save();
-
-//         res.status(201).json({ message: "Investment created successfully", investment });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).json({ message: "Failed to create investment", error: error.message });
-//     }
-// };
 // Function for investors to create investments with commitments
 exports.createInvestmentWithCommitment = async (req, res) => {
     // console.log('Starting createInvestmentWithCommitment');
@@ -503,7 +321,7 @@ exports.getCommitmentById = async (req, res) => {
     try {
         const { id } = req.params;
         const commitment = await Commitment.findById(id).populate("investor").populate("innovator");
-        
+
         if (!commitment) {
             return res.status(404).json({ message: "Commitment not found" });
         }
@@ -563,7 +381,7 @@ exports.updateProfile = async (req, res) => {
         } = req.body;
         const userId = req.user.id; // Extract user ID from token/session
         const role = req.role; // Extract role (Innovator or Investor)
-        console.log("bio :" + bio)
+
         let userModel;
         if (role === "innovator") {
             userModel = Innovator;
@@ -586,7 +404,7 @@ exports.updateProfile = async (req, res) => {
         user.education = education || user.education;
         user.phone = phone || user.phone;
         user.birthday = birthday || user.birthday;
-        user.bio = bio || user.bio
+        user.bio = bio || user.bio;
 
         if (role === "innovator") {
             user.accountX = accountX || user.accountX;
@@ -598,10 +416,24 @@ exports.updateProfile = async (req, res) => {
             user.password = await bcrypt.hash(password, salt);
         }
 
+        // Determine server URL (update SERVER_URL in your .env as needed)
+        const serverUrl = process.env.SERVER_URL || "http://localhost:5000";
+
         // Handle Profile Photo Upload (If Provided)
         if (req.file) {
-
-            user.photo = `/uploads/${req.file.filename}`;
+            // Remove old photo if exists
+            if (user.photo) {
+                // Remove the serverUrl part to get the relative path
+                const relativePath = user.photo.split(`${serverUrl}`)[1];
+                if (relativePath) {
+                    const filePath = path.join(__dirname, "..", relativePath);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                }
+            }
+            // Update with the new photo, adding the server URL
+            user.photo = `${serverUrl}/uploads/${req.file.filename}`;
         }
 
         await user.save();

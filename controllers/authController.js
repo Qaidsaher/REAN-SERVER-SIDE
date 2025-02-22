@@ -141,9 +141,9 @@ const loginUser = async (req, res) => {
     } else {
         return res.status(400).json({ message: "Invalid role specified" });
     }
-
+    // console.log("login", password);
     if (!user || !(await bcrypt.compare(password, user.password))) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return res.status(401).json({ message: "Invalid credentials s" });
     }
 
     const token = generateToken(user._id, role);

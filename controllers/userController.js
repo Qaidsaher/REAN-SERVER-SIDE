@@ -37,20 +37,57 @@ exports.getInnovations = async (req, res) => {
 // ✅ Create a new innovation
 
 // ✅ Create a new innovation
+// exports.createInnovation = async (req, res) => {
+//   try {
+//     const { name, description, cost, details, category } = req.body;
+
+//     // ✅ Handle File Uploads (If Provided)
+//     let imagePath = null;
+//     let videoPath = null;
+
+//     if (req.files) {
+//       if (req.files["image"]) {
+//         imagePath = `/uploads/${req.files["image"][0].filename}`;
+//       }
+//       if (req.files["video"]) {
+//         videoPath = `/uploads/${req.files["video"][0].filename}`;
+//       }
+//     }
+
+//     const newInnovation = new Innovation({
+//       name,
+//       description,
+//       cost,
+//       details,
+//       image: imagePath, // Save the correct image path
+//       video: videoPath, // Save the correct video path
+//       category,
+//       createdBy: req.user.id, // Attach logged-in user
+//     });
+
+//     await newInnovation.save();
+//     res.status(201).json(newInnovation);
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .json({ message: "Error creating innovation", error: error.message });
+//   }
+// };
 exports.createInnovation = async (req, res) => {
   try {
     const { name, description, cost, details, category } = req.body;
+    const serverUrl = process.env.SERVER_URL || "http://localhost:5000";
 
-    // ✅ Handle File Uploads (If Provided)
+    // Handle File Uploads (If Provided)
     let imagePath = null;
     let videoPath = null;
 
     if (req.files) {
       if (req.files["image"]) {
-        imagePath = `/uploads/${req.files["image"][0].filename}`;
+        imagePath = `${serverUrl}/uploads/${req.files["image"][0].filename}`;
       }
       if (req.files["video"]) {
-        videoPath = `/uploads/${req.files["video"][0].filename}`;
+        videoPath = `${serverUrl}/uploads/${req.files["video"][0].filename}`;
       }
     }
 
@@ -59,8 +96,8 @@ exports.createInnovation = async (req, res) => {
       description,
       cost,
       details,
-      image: imagePath, // Save the correct image path
-      video: videoPath, // Save the correct video path
+      image: imagePath, // Save the complete image URL
+      video: videoPath, // Save the complete video URL
       category,
       createdBy: req.user.id, // Attach logged-in user
     });
@@ -68,13 +105,50 @@ exports.createInnovation = async (req, res) => {
     await newInnovation.save();
     res.status(201).json(newInnovation);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error creating innovation", error: error.message });
+    res.status(500).json({ message: "Error creating innovation", error: error.message });
   }
 };
 
+
 // ✅ Update an innovation
+// exports.updateInnovation = async (req, res) => {
+//   try {
+//     const innovation = await Innovation.findOne({
+//       _id: req.params.id,
+//       createdBy: req.user.id,
+//     });
+
+//     if (!innovation)
+//       return res.status(404).json({ message: "Innovation not found" });
+
+//     const updatedData = req.body;
+
+//     // ✅ Handle File Updates (If Provided)
+//     if (req.files) {
+//       if (req.files["image"]) {
+//         updatedData.image = `/uploads/${req.files["image"][0].filename}`;
+//       }
+//       if (req.files["video"]) {
+//         updatedData.video = `/uploads/${req.files["video"][0].filename}`;
+//       }
+//     }
+
+//     const updatedInnovation = await Innovation.findByIdAndUpdate(
+//       req.params.id,
+//       updatedData,
+//       { new: true }
+//     );
+
+//     res.status(200).json(updatedInnovation);
+//   } catch (error) {
+//     res
+//       .status(500)
+//       .json({ message: "Error updating innovation", error: error.message });
+//   }
+// };
+const fs = require("fs");
+const path = require("path");
+
 exports.updateInnovation = async (req, res) => {
   try {
     const innovation = await Innovation.findOne({
@@ -86,14 +160,37 @@ exports.updateInnovation = async (req, res) => {
       return res.status(404).json({ message: "Innovation not found" });
 
     const updatedData = req.body;
+    const serverUrl = process.env.SERVER_URL || "http://localhost:5000";
 
-    // ✅ Handle File Updates (If Provided)
+    // Helper function to remove a file based on its stored URL
+    const removeFile = (fileUrl) => {
+      // Remove the server URL part to get the relative path (assumes URL contains '/uploads/')
+      const relativePath = fileUrl.split(`${serverUrl}`)[1];
+      if (relativePath) {
+        // Adjust the path: if your controller is in a subfolder, you might need to go up one level
+        const filePath = path.join(__dirname, "..", relativePath);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      }
+    };
+
+    // Handle file updates (if provided)
     if (req.files) {
+
       if (req.files["image"]) {
-        updatedData.image = `/uploads/${req.files["image"][0].filename}`;
+        // Remove existing image file if it exists
+        if (innovation.image) {
+          removeFile(innovation.image);
+        }
+        updatedData.image = `${serverUrl}/uploads/${req.files["image"][0].filename}`;
       }
       if (req.files["video"]) {
-        updatedData.video = `/uploads/${req.files["video"][0].filename}`;
+        // Remove existing video file if it exists
+        if (innovation.video) {
+          removeFile(innovation.video);
+        }
+        updatedData.video = `${serverUrl}/uploads/${req.files["video"][0].filename}`;
       }
     }
 
@@ -110,6 +207,7 @@ exports.updateInnovation = async (req, res) => {
       .json({ message: "Error updating innovation", error: error.message });
   }
 };
+
 
 // ✅ Delete an innovation
 exports.deleteInnovation = async (req, res) => {
@@ -313,67 +411,67 @@ exports.getInvestorDashboard = async (req, res) => {
 
 exports.getInnovatorDashboard = async (req, res) => {
   try {
-      const innovatorId = req.user.id; // Assuming user ID is set in `req.user`
+    const innovatorId = req.user.id; // Assuming user ID is set in `req.user`
 
-      // ✅ 1. Get Notifications Count
-      const notificationsCount = await Notification.countDocuments({ receiverId: innovatorId, receiverType: 'Innovator' });
+    // ✅ 1. Get Notifications Count
+    const notificationsCount = await Notification.countDocuments({ receiverId: innovatorId, receiverType: 'Innovator' });
 
-      // ✅ 2. Get Chat Count
-      const chatCount = await Chat.countDocuments({ innovator: innovatorId });
+    // ✅ 2. Get Chat Count
+    const chatCount = await Chat.countDocuments({ innovator: innovatorId });
 
-      // ✅ 3. Get Total Innovations
-      const totalInnovations = await Innovation.countDocuments({ createdBy: innovatorId });
+    // ✅ 3. Get Total Innovations
+    const totalInnovations = await Innovation.countDocuments({ createdBy: innovatorId });
 
-      // ✅ 4. Get Total Funding from Investments
-      const totalFunding = await Investment.aggregate([
-          { $match: { innovator: innovatorId } },
-          { $group: { _id: null, total: { $sum: "$amount" } } }
-      ]);
-      const totalFundingAmount = totalFunding.length ? totalFunding[0].total : 0;
+    // ✅ 4. Get Total Funding from Investments
+    const totalFunding = await Investment.aggregate([
+      { $match: { innovator: innovatorId } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+    const totalFundingAmount = totalFunding.length ? totalFunding[0].total : 0;
 
-      // ✅ 5. Get Commitments Count
-      const commitmentsCount = await Commitment.countDocuments({ innovator: innovatorId });
+    // ✅ 5. Get Commitments Count
+    const commitmentsCount = await Commitment.countDocuments({ innovator: innovatorId });
 
-      // ✅ 6. Get Investment Trends (grouped by month)
-      const investmentTrends = await Investment.aggregate([
-          { $match: { innovator: innovatorId } },
-          {
-              $group: {
-                  _id: { $month: "$createdAt" },
-                  investments: { $sum: "$amount" }
-              }
-          },
-          { $sort: { "_id": 1 } }
-      ]).then(data => data.map(item => ({
-          month: `Month ${item._id}`,
-          investments: item.investments
-      })));
+    // ✅ 6. Get Investment Trends (grouped by month)
+    const investmentTrends = await Investment.aggregate([
+      { $match: { innovator: innovatorId } },
+      {
+        $group: {
+          _id: { $month: "$createdAt" },
+          investments: { $sum: "$amount" }
+        }
+      },
+      { $sort: { "_id": 1 } }
+    ]).then(data => data.map(item => ({
+      month: `Month ${item._id}`,
+      investments: item.investments
+    })));
 
-      // ✅ 7. Get Pending Innovations
-      const pendingInnovations = await Innovation.find({ createdBy: innovatorId, status: 'Pending' }).select('name');
-      console.log("pend",JSON.stringify(pendingInnovations))  
-      // ✅ 8. Get Investment Requests (pending investments)
-      const investmentRequests = await Investment.find({ innovator: innovatorId, status: 'Pending' })
-          .populate('investor', 'firstName lastName')
-          .select('amount investor');
+    // ✅ 7. Get Pending Innovations
+    const pendingInnovations = await Innovation.find({ createdBy: innovatorId, status: 'Pending' }).select('name');
+    console.log("pend", JSON.stringify(pendingInnovations))
+    // ✅ 8. Get Investment Requests (pending investments)
+    const investmentRequests = await Investment.find({ innovator: innovatorId, status: 'Pending' })
+      .populate('investor', 'firstName lastName')
+      .select('amount investor');
 
-      // ✅ Combine all data into a single response
-      const dashboardData = {
-          notifications: notificationsCount,
-          chats: chatCount,
-          totalInnovations,
-          totalFunding: totalFundingAmount,
-          commitments: commitmentsCount,
-          investmentTrends,
-          pendingInnovations,
-          investmentRequests
-      };
+    // ✅ Combine all data into a single response
+    const dashboardData = {
+      notifications: notificationsCount,
+      chats: chatCount,
+      totalInnovations,
+      totalFunding: totalFundingAmount,
+      commitments: commitmentsCount,
+      investmentTrends,
+      pendingInnovations,
+      investmentRequests
+    };
 
-      res.status(200).json(dashboardData);
+    res.status(200).json(dashboardData);
 
   } catch (error) {
-      console.error("❌ Error fetching innovator dashboard data:", error);
-      res.status(500).json({ error: "Failed to fetch dashboard data" });
+    console.error("❌ Error fetching innovator dashboard data:", error);
+    res.status(500).json({ error: "Failed to fetch dashboard data" });
   }
 };
 

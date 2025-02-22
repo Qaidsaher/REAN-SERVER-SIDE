@@ -198,7 +198,7 @@ router.get('/investor/:id', async (req, res) => {
         if (!investor) {
             return res.status(404).json({ message: 'Investor not found' });
         }
-        console.log(JSON.stringify(investor))
+       
         // Find investments for this investor with populated innovation details
         const investments = await Investment.find({ investor: investor._id })
             .populate('innovation', 'name description')

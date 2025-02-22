@@ -50,17 +50,17 @@ const innovatorSchema = new mongoose.Schema(
 );
 
 // ✅ Hash password before saving (Only if password is provided)
-innovatorSchema.pre("save", async function (next) {
-  if (this.isModified("password") && this.password) {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  }
-  next();
-});
+// innovatorSchema.pre("save", async function (next) {
+//   if (this.isModified("password") && this.password) {
+//     const salt = await bcrypt.genSalt(10);
+//     this.password = await bcrypt.hash(this.password, salt);
+//   }
+//   next();
+// });
 
 // ✅ Compare password method
-innovatorSchema.methods.comparePassword = async function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
-};
+// innovatorSchema.methods.comparePassword = async function (enteredPassword) {
+//   return bcrypt.compare(enteredPassword, this.password);
+// };
 
 module.exports = mongoose.model("Innovator", innovatorSchema);

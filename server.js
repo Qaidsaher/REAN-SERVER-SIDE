@@ -15,11 +15,12 @@ const relationsRoutes = require('./routes/relationsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/usersRoutes');
 const userChatRoutes = require("./routes/userChatRoutes");
-const path = require('path')
 const investorUserRoutes = require('./routes/investorUserRoutes')
 const userInvestmentRoute = require('./routes/investmentRoutes')
 const adminUserRoutes = require('./routes/adminUserRoutes') 
 //------------------------------
+const path = require("path");
+
 const websiteRoutes =require('./routes/websiteRoutes') 
 const chatRoutes = require('./routes/chatRoutes')
 const profileRoutes = require('./routes/profileRoutes')
@@ -27,16 +28,28 @@ require('dotenv').config();
 
 const app = express();
 connectDB();
+// Example using Express middleware:
+app.use("/uploads", (req, res, next) => {
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+}, express.static(path.join(__dirname, "uploads")));
+
 // ✅ Enable CORS
-app.use(
-    cors({
-      origin: "http://localhost:5173", // ✅ Allow requests from React frontend
-      credentials: true,
-    })
-  );
+const corsOptions = {
+  origin: "http://localhost:5173", // your frontend URL
+  credentials: false,
+};
+
+app.use(cors(corsOptions));
+
   
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+// app.use((req, res, next) => {
+//   console.log("Request URL:", req.url);
+//   next();
+// });
+
+
 
 app.use('/api/admin', adminRoutes);
 app.use('/api/website',websiteRoutes)

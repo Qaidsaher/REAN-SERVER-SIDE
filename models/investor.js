@@ -48,17 +48,17 @@ const investorSchema = new mongoose.Schema(
 );
 
 // ✅ Hash password before saving (Only if password is provided)
-investorSchema.pre("save", async function (next) {
-  if (this.isModified("password") && this.password) {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-  }
-  next();
-});
+// investorSchema.pre("save", async function (next) {
+//   if (this.isModified("password") && this.password) {
+//     const salt = await bcrypt.genSalt(10);
+//     this.password = await bcrypt.hash(this.password, salt);
+//   }
+//   next();
+// });
 
-// ✅ Compare password method
-investorSchema.methods.comparePassword = async function (enteredPassword) {
-  return bcrypt.compare(enteredPassword, this.password);
-};
+// // ✅ Compare password method
+// investorSchema.methods.comparePassword = async function (enteredPassword) {
+//   return bcrypt.compare(enteredPassword, this.password);
+// };
 
 module.exports = mongoose.model("Investor", investorSchema);
