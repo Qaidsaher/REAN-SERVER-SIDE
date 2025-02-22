@@ -23,8 +23,8 @@ const bcrypt = require("bcryptjs");
 
 const investorSchema = new mongoose.Schema(
   {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
+    firstName: { type: String, default: "unknown" },
+    lastName: { type: String, default: "unknown" },
     email: { type: String, required: true, unique: true },
     bio: { type: String, default: "" },
     city: { type: String, default: "unknown" },

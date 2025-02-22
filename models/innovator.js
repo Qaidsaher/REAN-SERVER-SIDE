@@ -24,8 +24,8 @@ const bcrypt = require("bcryptjs");
 
 const innovatorSchema = new mongoose.Schema(
   {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
+    firstName: { type: String, default: "unknown"},
+    lastName: { type: String, default: "unknown" },
     bio: { type: String, default: "" },
     email: { type: String, required: true, unique: true },
     city: { type: String, default: "unknown" },
