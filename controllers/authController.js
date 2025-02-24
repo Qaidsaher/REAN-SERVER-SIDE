@@ -294,6 +294,45 @@ const forgotPassword = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+// ✅ Update Admin Profile (Admin only)
+const updateAdminProfile = async (req, res) => {
+    const { name, email } = req.body;
+
+    // Verify that the request is coming from an admin
+    if (req.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied. Admins only." });
+    }
+
+    // Validate input
+    if (!name || !email) {
+        return res.status(400).json({ message: "Name and email are required." });
+    }
+
+    try {
+        // Optionally: Check if the provided email is already used by another admin
+        const existingAdmin = await Admin.findOne({ email, _id: { $ne: req.user._id } });
+        if (existingAdmin) {
+            return res.status(400).json({ message: "Email is already in use by another admin." });
+        }
+
+        // Update the admin document with new name and email
+        const updatedAdmin = await Admin.findByIdAndUpdate(
+            req.user._id,
+            { name, email },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedAdmin) {
+            return res.status(404).json({ message: "Admin not found" });
+        }
+
+        res.json({ message: "Admin profile updated successfully", admin: updatedAdmin });
+    } catch (error) {
+        console.error("❌ [UpdateAdminProfile] Error:", error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 
 // ✅ Reset Password (Supports Admin & Others)
 const resetPassword = async (req, res) => {
@@ -353,6 +392,7 @@ const resetPassword = async (req, res) => {
 
 
 module.exports = {
+    updateAdminProfile,
     registerUser,
     loginUser,
     logoutUser,

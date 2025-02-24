@@ -179,17 +179,7 @@ router.get('/innovator/:id/innovations', async (req, res) => {
 }
 )
 
-// Show investor by ID
-// router.get('/investor/:id', async (req, res) => {
-//     try {
-//         const investor = await Investor.findById(req.params.id).select('-password')
-//             .populate({ path: 'investments', populate: { path: 'innovation', select: 'name description' } });
-//         if (!investor) return res.status(404).json({ message: 'Investor not found' });
-//         res.status(200).json(investor);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error fetching investor details', error: error.message });
-//     }
-// });
+
 // Get investor with investments and related innovations
 router.get('/investor/:id', async (req, res) => {
     try {
@@ -214,7 +204,7 @@ router.get('/investor/:id', async (req, res) => {
 // Get 3 random innovations with createdBy relation
 router.get('/innovations', async (req, res) => {
     try {
-        const innovations = await Innovation.find().populate("category createdBy");
+        const innovations = await Innovation.find({ status: 'Accepted' }).populate("category createdBy");
 
         res.status(200).json(innovations);
     } catch (error) {
@@ -284,10 +274,11 @@ router.get('/investors/random', async (req, res) => {
 router.get('/innovations/random', async (req, res) => {
     try {
         const randomInnovations = await Innovation.aggregate([
+            { $match: { status: 'Accepted' } },
             { $sample: { size: 3 } },
             {
                 $lookup: {
-                    from: 'innovators', // Assuming your users collection is named 'users'
+                    from: 'innovators', // Adjust collection name if needed
                     localField: 'createdBy',
                     foreignField: '_id',
                     as: 'createdBy'
@@ -305,6 +296,7 @@ router.get('/innovations/random', async (req, res) => {
         res.status(500).json({ message: 'Error fetching random innovations', error: error.message });
     }
 });
+
 
 module.exports = router;
 

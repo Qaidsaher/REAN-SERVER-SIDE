@@ -8,7 +8,8 @@ const {
     forgotPassword,
     resetPassword,
     googleAuth,
-    deleteAccount
+    deleteAccount,
+    updateAdminProfile
 } = require('../controllers/authController');
 const authMiddleware = require('../middleware/authMiddleware');
 
@@ -24,5 +25,6 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/forgot-password', forgotPassword);
 router.delete('/delete-account', authMiddleware, deleteAccount);
+router.put('/update-profile', authMiddleware, updateAdminProfile);
 
 module.exports = router;

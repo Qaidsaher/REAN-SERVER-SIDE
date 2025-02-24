@@ -45,13 +45,13 @@ async function seedData() {
     // Create Admins (1 primary + 2 additional)
     // -------------------------------------------------------------------------
     const adminPassword = await bcrypt.hash("password123", 10);
-    const adminSaher = await Admin.create({
+    const adminream = await Admin.create({
       name: faker.person.fullName(),
-      email: "saher@gmail.com",
+      email: "ream@gmail.com",
       state: faker.location.state(),
       password: adminPassword,
     });
-    console.log("Primary Admin created:", adminSaher.email);
+    console.log("Primary Admin created:", adminream.email);
 
     const adminsFake = [];
     for (let i = 0; i < 2; i++) {
@@ -72,7 +72,7 @@ async function seedData() {
     for (let i = 0; i < 3; i++) {
       const cat = await Category.create({
         name: faker.commerce.department(),
-        createdBy: adminSaher._id,
+        createdBy: adminream._id,
       });
       categories.push(cat);
     }
@@ -82,11 +82,11 @@ async function seedData() {
     // Create Innovators (1 primary + 5 additional)
     // -------------------------------------------------------------------------
     const innovatorPassword = await bcrypt.hash("password123", 10);
-    const innovatorSaher = await Innovator.create({
+    const innovatorream = await Innovator.create({
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
       bio: faker.lorem.sentence(),
-      email: "saher@gmail.com",
+      email: "ream@gmail.com",
       city: faker.location.city(),
       education: faker.person.jobTitle(),
       password: innovatorPassword,
@@ -95,7 +95,7 @@ async function seedData() {
       birthday: faker.date.past(30, new Date("2000-01-01")),
       accountX: faker.string.alphanumeric(10),
     });
-    console.log("Primary Innovator created:", innovatorSaher.email);
+    console.log("Primary Innovator created:", innovatorream.email);
 
     const innovatorsFake = [];
     for (let i = 0; i < 5; i++) {
@@ -117,16 +117,16 @@ async function seedData() {
     console.log("Additional Innovators created:", innovatorsFake.length);
 
     // Combine all innovators in one array for later use.
-    const allInnovators = [innovatorSaher, ...innovatorsFake];
+    const allInnovators = [innovatorream, ...innovatorsFake];
 
     // -------------------------------------------------------------------------
     // Create Investors (1 primary + 3 additional)
     // -------------------------------------------------------------------------
     const investorPassword = await bcrypt.hash("password123", 10);
-    const investorSaher = await Investor.create({
+    const investorream = await Investor.create({
       firstName: faker.person.firstName(),
       lastName: faker.person.lastName(),
-      email: "saher@gmail.com",
+      email: "ream@gmail.com",
       bio: faker.lorem.sentence(),
       city: faker.location.city(),
       education: faker.person.jobTitle(),
@@ -135,7 +135,7 @@ async function seedData() {
       phone: faker.phone.number(),
       birthday: faker.date.past(30, new Date("2000-01-01")),
     });
-    console.log("Primary Investor created:", investorSaher.email);
+    console.log("Primary Investor created:", investorream.email);
 
     const investorsFake = [];
     for (let i = 0; i < 3; i++) {
@@ -156,7 +156,7 @@ async function seedData() {
     console.log("Additional Investors created:", investorsFake.length);
 
     // Combine all investors in one array for later use.
-    const allInvestors = [investorSaher, ...investorsFake];
+    const allInvestors = [investorream, ...investorsFake];
 
     // -------------------------------------------------------------------------
     // Create Innovations (5 records)
@@ -182,8 +182,8 @@ async function seedData() {
     // Create Chats (create a chat between each primary innovator & investor)
     // -------------------------------------------------------------------------
     const chat = await Chat.create({
-      innovator: innovatorSaher._id,
-      investor: investorSaher._id,
+      innovator: innovatorream._id,
+      investor: investorream._id,
     });
     console.log("Chat created between primary innovator and investor.");
 
@@ -234,7 +234,7 @@ async function seedData() {
     // -------------------------------------------------------------------------
     const message = await Message.create({
       chatId: chat._id,
-      sender: innovatorSaher._id,
+      sender: innovatorream._id,
       senderType: "Innovator",
       content: faker.lorem.sentence(),
       status: "Unread",
@@ -246,13 +246,13 @@ async function seedData() {
     // -------------------------------------------------------------------------
     const notifications = [];
     // For each admin (primary + fake)
-    const allAdmins = [adminSaher, ...adminsFake];
+    const allAdmins = [adminream, ...adminsFake];
     allAdmins.forEach((admin) => {
       notifications.push({
         title: faker.lorem.words(3),
         content: "Notification for Admin " + admin.email,
         senderType: "Admin",
-        senderId: adminSaher._id, // assume primary admin sends these
+        senderId: adminream._id, // assume primary admin sends these
         receiverType: "Admin",
         receiverId: admin._id,
         type: "System",
@@ -265,7 +265,7 @@ async function seedData() {
         title: faker.lorem.words(3),
         content: "Notification for Innovator " + innovator.email,
         senderType: "Admin",
-        senderId: adminSaher._id,
+        senderId: adminream._id,
         receiverType: "Innovator",
         receiverId: innovator._id,
         type: "System",
@@ -278,7 +278,7 @@ async function seedData() {
         title: faker.lorem.words(3),
         content: "Notification for Investor " + investor.email,
         senderType: "Admin",
-        senderId: adminSaher._id,
+        senderId: adminream._id,
         receiverType: "Investor",
         receiverId: investor._id,
         type: "System",

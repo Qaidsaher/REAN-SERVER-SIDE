@@ -5,6 +5,7 @@ const Innovation = require("../models/innovation");
 const Innovator = require("../models/innovator");
 const Investor = require("../models/investor");
 const Message = require("../models/message");
+const crypto = require('node:crypto');
 
 const Commitment = require("../models/commitment");
 const Investment = require("../models/investment");
@@ -107,19 +108,34 @@ exports.getAdminDashboard = async (req, res) => {
 };
 
 
-// controllers/adminController.js
+
+
 exports.createAdmin = async (req, res) => {
     try {
-        const { name, email, password } = req.body;
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-        const newAdmin = new Admin({ name, email, password: hashedPassword });
-        await newAdmin.save();
-        res.status(201).json({ message: 'Admin created successfully' });
+      const { name, email } = req.body;
+      
+      // Generate a random 12-character hexadecimal password
+      const generatedPassword = crypto.randomBytes(6).toString('hex');
+      
+      // Hash the generated password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(generatedPassword, salt);
+      
+      // Create a new admin with the hashed password
+      const newAdmin = new Admin({ name, email, password: hashedPassword });
+      await newAdmin.save();
+      
+      // Optionally, send the generatedPassword to the admin via email
+      res.status(201).json({ 
+        message: 'Admin created successfully',
+        password: generatedPassword  // Return the plain password for further action
+      });
     } catch (error) {
-        res.status(500).json({ error: error.message });
+      console.error("[ERROR] Error creating admin:", error);
+      res.status(500).json({ error: error.message });
     }
-};
+  };
+  
 
 exports.updateAdmin = async (req, res) => {
     try {
