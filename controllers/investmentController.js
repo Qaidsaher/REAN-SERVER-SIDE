@@ -84,12 +84,18 @@ exports.updateInvestment = async (req, res) => {
       return res.status(404).json({ message: 'Commitment not found for this investment.' });
     }
 
+    await Investment.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true }
+    );
     // Update the commitment status
     const updatedCommitment = await Commitment.findByIdAndUpdate(
       commitmentId,
       { status },
       { new: true }
     );
+
 
     // console.log('Updated Commitment:', updatedCommitment);
 
