@@ -18,7 +18,7 @@ const Message = require("../models/message");
 const Notification = require("../models/notification");
 
 // MongoDB connection URI – update with your credentials or local DB URL.
-const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/testdb";
+const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/test_db";
 
 // Connect to MongoDB (connection options are now no-ops with Node.js Driver v4+)
 mongoose
