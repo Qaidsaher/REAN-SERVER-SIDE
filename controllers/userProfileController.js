@@ -210,26 +210,92 @@ exports.createInvestmentWithCommitment = async (req, res) => {
     }
 };
 // Function for innovator to add conditions
+// exports.addCommitmentConditions = async (req, res) => {
+//     try {
+//         const { commitmentId, conditions } = req.body;
+//         const innovatorId = req.user.id;
+
+//         const commitment = await Commitment.findById(commitmentId);
+//         if (!commitment || String(commitment.innovator) !== innovatorId) {
+//             return res.status(403).json({ message: "Unauthorized or commitment not found" });
+//         }
+
+//         commitment.conditions = conditions;
+//         await commitment.save();
+
+//         res.status(200).json({ message: "Conditions added successfully" });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: "Failed to add conditions", error: error.message });
+//     }
+// };
+// Function for innovator to add conditions
 exports.addCommitmentConditions = async (req, res) => {
     try {
         const { commitmentId, conditions } = req.body;
         const innovatorId = req.user.id;
 
         const commitment = await Commitment.findById(commitmentId);
-        if (!commitment || String(commitment.innovator) !== innovatorId) {
-            return res.status(403).json({ message: "Unauthorized or commitment not found" });
+        if (!commitment) {
+             return res.status(404).json({ message: "Commitment not found" });
+        }
+        // Ensure the user making the request is the innovator associated with the commitment
+        if (String(commitment.innovator) !== innovatorId) {
+            return res.status(403).json({ message: "Unauthorized: You are not the innovator for this commitment" });
         }
 
         commitment.conditions = conditions;
         await commitment.save();
 
-        res.status(200).json({ message: "Conditions added successfully" });
+        // --- Notification Logic Start ---
+        try {
+            const notification = new Notification({
+                title: "Commitment Conditions Added",
+                content: `The innovator has added conditions to commitment ID ${commitment._id}. Please review.`,
+                senderType: "Innovator",
+                senderId: innovatorId,
+                receiverType: "Investor",
+                receiverId: commitment.investor, // Get investor ID from the commitment document
+                type: "System",
+            status: "Info",
+                relatedModel: 'Commitment', // Optional: Link notification to the relevant model
+                relatedId: commitment._id    // Optional: Link notification to the specific document
+            });
+            await notification.save();
+            console.log(`Notification sent to investor ${commitment.investor} for added conditions.`);
+        } catch (notificationError) {
+            // Log the error but don't fail the main request because of notification failure
+            console.error("Failed to create notification for added conditions:", notificationError);
+        }
+        // --- Notification Logic End ---
+
+        res.status(200).json({ message: "Conditions added successfully", commitment }); // Return updated commitment
+
     } catch (error) {
-        console.error(error);
+        console.error("Error in addCommitmentConditions:", error);
         res.status(500).json({ message: "Failed to add conditions", error: error.message });
     }
 };
+// Function for investor to sign commitment
+// exports.signCommitmentInvestor = async (req, res) => {
+//     try {
+//         const { commitmentId } = req.body;
+//         const investorId = req.user.id;
 
+//         const commitment = await Commitment.findById(commitmentId);
+//         if (!commitment || String(commitment.investor) !== investorId) {
+//             return res.status(403).json({ message: "Unauthorized or commitment not found" });
+//         }
+
+//         commitment.investorSign = true;
+//         await commitment.save();
+
+//         res.status(200).json({ message: "Investor signed the commitment successfully" });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: "Failed to sign commitment", error: error.message });
+//     }
+// };
 // Function for investor to sign commitment
 exports.signCommitmentInvestor = async (req, res) => {
     try {
@@ -237,20 +303,107 @@ exports.signCommitmentInvestor = async (req, res) => {
         const investorId = req.user.id;
 
         const commitment = await Commitment.findById(commitmentId);
-        if (!commitment || String(commitment.investor) !== investorId) {
-            return res.status(403).json({ message: "Unauthorized or commitment not found" });
+        if (!commitment) {
+            return res.status(404).json({ message: "Commitment not found" });
+        }
+         // Ensure the user making the request is the investor associated with the commitment
+        if (String(commitment.investor) !== investorId) {
+            return res.status(403).json({ message: "Unauthorized: You are not the investor for this commitment" });
+        }
+
+        // Optional: Add check to prevent re-signing
+        if (commitment.investorSign) {
+             return res.status(400).json({ message: "Investor has already signed this commitment." });
         }
 
         commitment.investorSign = true;
+
+        // --- Optional: Check if both parties have signed ---
+        let bothSigned = false;
+        if (commitment.innovatorSign) { // Check if innovator had already signed
+            commitment.status = "Active"; // Update status if both signed
+            bothSigned = true;
+            console.log(`Commitment ${commitment._id} is now active as both parties signed.`);
+            // Optionally update the related Investment status as well
+            // await Investment.updateOne({ commitment: commitment._id }, { status: "Active" });
+        }
+        // --- End Optional Check ---
+
         await commitment.save();
 
-        res.status(200).json({ message: "Investor signed the commitment successfully" });
+        // --- Notification Logic Start ---
+        try {
+            const notification = new Notification({
+                title: "Commitment Signed by Investor",
+                content: `The investor has signed commitment ID ${commitment._id}.`,
+                senderType: "Investor",
+                senderId: investorId,
+                receiverType: "Innovator",
+                receiverId: commitment.innovator, // Get innovator ID from the commitment
+                 type: "System",
+                status: "Success",
+                 relatedModel: 'Commitment',
+                 relatedId: commitment._id
+            });
+            await notification.save();
+            console.log(`Notification sent to innovator ${commitment.innovator} for investor signature.`);
+
+            // Optional: Send a second notification if both signed
+            if (bothSigned) {
+                const bothSignedNotification = new Notification({
+                    title: "Commitment Fully Signed and Active",
+                    content: `Commitment ID ${commitment._id} has been signed by both parties and is now active.`,
+                    senderType: "System", // Or Investor/Innovator depending on who triggered the final state
+                    senderId: investorId, // ID of the user whose action completed the signing
+                    receiverType: "Innovator", // Send to innovator
+                    receiverId: commitment.innovator,
+                    type: "Milestone",
+                    status: "Success",
+                    relatedModel: 'Commitment',
+                    relatedId: commitment._id
+                });
+                await bothSignedNotification.save();
+                 // Optionally send one to the investor too
+                 const bothSignedNotificationInvestor = { ...bothSignedNotification.toObject(), _id: undefined, receiverType: "Investor", receiverId: commitment.investor };
+                 delete bothSignedNotificationInvestor._id; // ensure new doc
+                 await new Notification(bothSignedNotificationInvestor).save();
+
+                console.log(`Notifications sent to both parties for commitment ${commitment._id} activation.`);
+            }
+
+        } catch (notificationError) {
+            console.error("Failed to create notification for investor signing:", notificationError);
+        }
+        // --- Notification Logic End ---
+
+        res.status(200).json({ message: "Investor signed the commitment successfully", commitment });
+
     } catch (error) {
-        console.error(error);
+        console.error("Error in signCommitmentInvestor:", error);
         res.status(500).json({ message: "Failed to sign commitment", error: error.message });
     }
 };
 
+// Function for innovator to sign commitment
+// exports.signCommitmentInnovator = async (req, res) => {
+//     try {
+//         const { commitmentId } = req.body;
+//         const innovatorId = req.user.id;
+
+//         const commitment = await Commitment.findById(commitmentId);
+//         if (!commitment || String(commitment.innovator) !== innovatorId) {
+//             return res.status(403).json({ message: "Unauthorized or commitment not found" });
+//         }
+
+//         commitment.innovatorSign = true;
+//         await commitment.save();
+
+//         res.status(200).json({ message: "Innovator signed the commitment successfully" });
+//     } catch (error) {
+//         console.error(error);
+//         res.status(500).json({ message: "Failed to sign commitment", error: error.message });
+//     }
+// };
 // Function for innovator to sign commitment
 exports.signCommitmentInnovator = async (req, res) => {
     try {
@@ -258,16 +411,83 @@ exports.signCommitmentInnovator = async (req, res) => {
         const innovatorId = req.user.id;
 
         const commitment = await Commitment.findById(commitmentId);
-        if (!commitment || String(commitment.innovator) !== innovatorId) {
-            return res.status(403).json({ message: "Unauthorized or commitment not found" });
-        }
+         if (!commitment) {
+             return res.status(404).json({ message: "Commitment not found" });
+         }
+         // Ensure the user making the request is the innovator associated with the commitment
+         if (String(commitment.innovator) !== innovatorId) {
+             return res.status(403).json({ message: "Unauthorized: You are not the innovator for this commitment" });
+         }
+
+         // Optional: Add check to prevent re-signing
+         if (commitment.innovatorSign) {
+              return res.status(400).json({ message: "Innovator has already signed this commitment." });
+         }
 
         commitment.innovatorSign = true;
+
+        // --- Optional: Check if both parties have signed ---
+         let bothSigned = false;
+         if (commitment.investorSign) { // Check if investor had already signed
+             commitment.status = "Active"; // Update status if both signed
+             bothSigned = true;
+             console.log(`Commitment ${commitment._id} is now active as both parties signed.`);
+              // Optionally update the related Investment status as well
+             // await Investment.updateOne({ commitment: commitment._id }, { status: "Active" });
+         }
+         // --- End Optional Check ---
+
         await commitment.save();
 
-        res.status(200).json({ message: "Innovator signed the commitment successfully" });
+        // --- Notification Logic Start ---
+        try {
+            const notification = new Notification({
+                title: "Commitment Signed by Innovator",
+                content: `The innovator has signed commitment ID ${commitment._id}.`,
+                senderType: "Innovator",
+                senderId: innovatorId,
+                receiverType: "Investor",
+                receiverId: commitment.investor, // Get investor ID from the commitment
+                type: "System",
+                status: "Success",
+                 relatedModel: 'Commitment',
+                 relatedId: commitment._id
+            });
+            await notification.save();
+            console.log(`Notification sent to investor ${commitment.investor} for innovator signature.`);
+
+             // Optional: Send a second notification if both signed
+            if (bothSigned) {
+                 const bothSignedNotification = new Notification({
+                     title: "Commitment Fully Signed and Active",
+                     content: `Commitment ID ${commitment._id} has been signed by both parties and is now active.`,
+                     senderType: "System", // Or Innovator/Investor depending on who triggered the final state
+                     senderId: innovatorId, // ID of the user whose action completed the signing
+                     receiverType: "Investor", // Send to investor
+                     receiverId: commitment.investor,
+                     type: "Milestone",
+                     status: "Success",
+                     relatedModel: 'Commitment',
+                     relatedId: commitment._id
+                 });
+                 await bothSignedNotification.save();
+                  // Optionally send one to the innovator too
+                  const bothSignedNotificationInnovator = { ...bothSignedNotification.toObject(), _id: undefined, receiverType: "Innovator", receiverId: commitment.innovator };
+                  delete bothSignedNotificationInnovator._id; // ensure new doc
+                  await new Notification(bothSignedNotificationInnovator).save();
+
+                 console.log(`Notifications sent to both parties for commitment ${commitment._id} activation.`);
+            }
+
+        } catch (notificationError) {
+            console.error("Failed to create notification for innovator signing:", notificationError);
+        }
+        // --- Notification Logic End ---
+
+        res.status(200).json({ message: "Innovator signed the commitment successfully", commitment });
+
     } catch (error) {
-        console.error(error);
+        console.error("Error in signCommitmentInnovator:", error);
         res.status(500).json({ message: "Failed to sign commitment", error: error.message });
     }
 };
