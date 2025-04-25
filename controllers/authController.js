@@ -189,28 +189,72 @@ const logoutUser = (req, res) => {
 };
 
 // ✅ Change Password (Supports Admin)
+// const changePassword = async (req, res) => {
+//     const { oldPassword, newPassword } = req.body;
+
+//     let user;
+//     if (req.role === 'innovator') {
+//         user = await Innovator.findById(req.user.id);
+//     } else if (req.role === 'investor') {
+//         user = await Investor.findById(req.user.id);
+//     } else if (req.role === 'admin') {
+//         user = await Admin.findById(req.user.id);
+//     } else {
+//         return res.status(400).json({ message: "Invalid role specified" });
+//     }
+
+//     if (!user || !(await bcrypt.compare(oldPassword, user.password))) {
+//         return res.status(400).json({ message: 'Old password is incorrect' });
+//     }
+
+//     user.password = await bcrypt.hash(newPassword, 10);
+//     await user.save();
+
+//     res.json({ message: 'Password changed successfully' });
+// };
+// const bcrypt = require('bcryptjs'); // Ensure this is imported
+
+// ✅ Change Password (Supports Admin)
 const changePassword = async (req, res) => {
-    const { oldPassword, newPassword } = req.body;
+    try {
+        const { oldPassword, newPassword } = req.body;
 
-    let user;
-    if (req.role === 'innovator') {
-        user = await Innovator.findById(req.user.id);
-    } else if (req.role === 'investor') {
-        user = await Investor.findById(req.user.id);
-    } else if (req.role === 'admin') {
-        user = await Admin.findById(req.user.id);
-    } else {
-        return res.status(400).json({ message: "Invalid role specified" });
+        if (!oldPassword || !newPassword) {
+
+            return res.status(400).json({ message: "Old and new passwords are required" });
+        }
+
+        let user;
+        if (req.role === 'innovator') {
+            user = await Innovator.findById(req.user.id);
+        } else if (req.role === 'investor') {
+            user = await Investor.findById(req.user.id);
+        } else if (req.role === 'admin') {
+            user = await Admin.findById(req.user.id);
+        } else {
+            return res.status(400).json({ message: "Invalid role specified" });
+        }
+
+        if (!user || typeof user.password !== 'string') {
+            return res.status(400).json({ message: "User not found or password invalid" });
+        }
+
+        const isMatch = await bcrypt.compare(oldPassword, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Old password is incorrect" });
+        }
+
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
+        user.password = hashedPassword;
+
+        await user.save();
+
+        res.status(200).json({ message: "Password updated successfully" });
+    } catch (error) {
+        console.error("Change password error:", error);
+        res.status(500).json({ message: "Server error" });
     }
-
-    if (!user || !(await bcrypt.compare(oldPassword, user.password))) {
-        return res.status(400).json({ message: 'Old password is incorrect' });
-    }
-
-    user.password = await bcrypt.hash(newPassword, 10);
-    await user.save();
-
-    res.json({ message: 'Password changed successfully' });
 };
 
 // Utility function to get user by role
